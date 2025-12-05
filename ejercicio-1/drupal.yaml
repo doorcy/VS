@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: drupal-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal
+spec:
+  selector:
+    matchLabels:
+      app: drupal
+  template:
+    metadata:
+      labels:
+        app: drupal
+    spec:
+      initContainers:
+        - name: init-sites
+          image: drupal:10-apache
+          command: ['sh', '-c', 'cp -r /var/www/html/sites/* /data/; chown -R www-data:www-data /data']
+          volumeMounts:
+            - name: drupal-data
+              mountPath: /data
+      containers:
+        - name: drupal
+          image: drupal:10-apache
+          env:
+            - name: DRUPAL_DATABASE_HOST
+              value: mysql
+            - name: DRUPAL_DATABASE_NAME
+              value: drupal
+            - name: DRUPAL_DATABASE_USER
+              value: drupaluser
+            - name: DRUPAL_DATABASE_PASSWORD
+              value: drupalpassword
+          volumeMounts:
+            - name: drupal-data
+              mountPath: /var/www/html/sites
+      volumes:
+        - name: drupal-data
+          persistentVolumeClaim:
+            claimName: drupal-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      nodePort: 30085
+  selector:
+    app: drupal
