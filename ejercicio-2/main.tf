@@ -1,11 +1,11 @@
 terraform {
   required_providers {
     kind = {
-      source  = "tehcyx/kind"
+      source = "tehcyx/kind"
       version = "0.2.0"
     }
     kubernetes = {
-      source  = "hashicorp/kubernetes"
+      source = "hashicorp/kubernetes"
       version = "2.23.0"
     }
   }
@@ -14,15 +14,15 @@ terraform {
 provider "kind" {}
 
 resource "kind_cluster" "default" {
-  name = "matomo-cluster"
-
+  name = "terraform-k8s-cluster"
+  
   kind_config {
-    kind        = "Cluster"
+    kind = "Cluster"
     api_version = "kind.x-k8s.io/v1alpha4"
 
     node {
       role = "control-plane"
-
+      
       extra_port_mappings {
         container_port = 30081
         host_port      = 8081
@@ -49,7 +49,7 @@ provider "kubernetes" {
 
 resource "kubernetes_deployment" "mariadb" {
   metadata {
-    name   = "mariadb"
+    name = "mariadb"
     labels = { app = "mariadb" }
   }
 
@@ -60,8 +60,8 @@ resource "kubernetes_deployment" "mariadb" {
       metadata { labels = { app = "mariadb" } }
       spec {
         container {
-          name  = "mariadb"
           image = "mariadb:10.6"
+          name  = "mariadb"
 
           env {
             name  = "MARIADB_ROOT_PASSWORD"
@@ -110,10 +110,10 @@ resource "kubernetes_service" "mariadb" {
 
 resource "kubernetes_deployment" "matomo" {
   metadata {
-    name   = "matomo"
+    name = "matomo"
     labels = { app = "matomo" }
   }
-
+  
   depends_on = [kubernetes_deployment.mariadb]
 
   spec {
@@ -123,8 +123,8 @@ resource "kubernetes_deployment" "matomo" {
       metadata { labels = { app = "matomo" } }
       spec {
         container {
+          image = "doorsy/matomo-custom:latest" 
           name  = "matomo"
-          image = var.matomo_image
 
           env {
             name  = "MATOMO_DATABASE_HOST"
